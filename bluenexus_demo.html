@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>BlueNexus – Comparison Workflow Toolkit Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f4f8fa;--card:#fff;--ink:#16324a;--mut:#5b7083;--teal:#00727a;--line:#d6e2e8;--ok:#1b8a4b;--warn:#b7791f;--bad:#c0392b;--okbg:#e3f4ea;--warnbg:#fdf1dc;--badbg:#fbe5e2;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1c27;--card:#172a3a;--ink:#e6eff5;--mut:#9bb0c0;--teal:#3cc1c9;--line:#2a4256;--okbg:#14382a;--warnbg:#3d3115;--badbg:#431e1a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.45}
+.w{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:0}.sub{color:var(--mut);font-size:13px;margin:2px 0 14px}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.st{flex:1;min-width:120px;padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid var(--line);font-size:13px;cursor:pointer;color:var(--mut)}
+.st.on{background:var(--teal);color:#fff;border-color:var(--teal);font-weight:600}.st.done{color:var(--teal)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.cap{background:var(--ink);color:var(--bg);border-radius:10px;padding:12px 14px;font-size:15px;min-height:62px}
+.bar{height:5px;background:var(--line);border-radius:3px;margin:8px 0}.bar i{display:block;height:100%;width:0;background:var(--teal);border-radius:3px;transition:width .3s}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+button,label.b{background:var(--teal);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer}
+button.g,label.b{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{color:var(--mut);font-weight:600}
+.tag{padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600}.ok{background:var(--okbg);color:var(--ok)}.warn{background:var(--warnbg);color:var(--warn)}.bad{background:var(--badbg);color:var(--bad)}
+tr.in{animation:f .5s}@keyframes f{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+.m{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}.m div{flex:1;min-width:110px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}.m b{font-size:20px;display:block}.m span{font-size:12px;color:var(--mut)}
+.row{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}.row .l{width:150px;color:var(--mut)}.row .t{flex:1;height:16px;position:relative;background:var(--bg);border-radius:4px}.row .f{position:absolute;top:0;height:100%;border-radius:4px}
+h3{margin:0 0 8px;font-size:15px}.note{font-size:12px;color:var(--mut)}
+</style></head><body><div class="w">
+<h1>BlueNexus — Comparison Workflow Toolkit (I02)</h1>
+<div class="sub">SIH26067 · Proof-of-concept demo · Team Nova Sync · synthetic data only</div>
+<div class="steps" id="steps"></div>
+<div class="cap" id="cap"></div><div class="bar"><i id="pb"></i></div>
+<div class="ctl"><button id="play">▶ Play demo</button><button class="g" id="prev">◀ Back</button><button class="g" id="next">Next ▶</button>
+<label class="b">Upload model CSV<input type="file" id="fm" accept=".csv" hidden></label><label class="b">Upload observation CSV<input type="file" id="fo" accept=".csv" hidden></label><button class="g" id="rst">Reset sample</button></div>
+<div class="card" id="panel"></div>
+<div class="note">CSV columns: id,lat,lon,depth_m,time,value,unit (unit C or F). Tolerances: ±0.05° lat/lon, ±2 m depth, ±3 h time. Uploaded files are processed only in your browser.</div>
+</div><script>
+const SAMPLE_M=`id,lat,lon,depth_m,time,value,unit
+M1,13.08,80.27,0,2026-10-01T00:00,28.4,C
+M2,13.08,80.27,10,2026-10-01T00:00,27.9,C
+M3,13.08,80.27,50,2026-10-01T00:00,25.1,C
+M4,13.08,80.27,100,2026-10-01T00:00,21.3,C
+M5,13.10,80.30,0,2026-10-01T06:00,28.8,C
+M6,13.10,80.30,10,2026-10-01T06:00,28.1,C
+M7,13.10,80.30,50,2026-10-01T06:00,25.4,C
+M8,12.95,80.25,0,2026-10-01T12:00,29.0,C
+M9,12.95,80.25,25,2026-10-01T12:00,27.2,C
+M10,12.95,80.25,75,2026-10-01T12:00,23.0,C`;
+const SAMPLE_O=`id,lat,lon,depth_m,time,value,unit
+O1,13.08,80.27,0,2026-10-01T00:30,28.9,C
+O2,13.08,80.27,10,2026-10-01T00:00,27.5,C
+O3,13.08,80.27,50,2026-10-01T01:00,25.6,C
+O4,13.08,80.27,100,2026-10-01T00:00,70.7,F
+O5,13.10,80.30,0,2026-10-01T06:00,28.8,C
+O6,13.10,80.30,10,2026-10-01T06:00,,C
+O7,13.10,80.30,50,2026-10-01T06:15,25.0,C
+O8,12.95,80.25,0,2026-10-01T12:00,29.4,C
+O9,12.95,80.25,25,2026-10-01T12:00,26.9,C
+O10,12.95,80.25,75,2026-10-02T12:00,22.6,C
+O11,11.50,79.90,0,2026-10-01T00:00,29.9,C`;
+const $=id=>document.getElementById(id);
+const parse=t=>{const L=t.trim().split(/\r?\n/);const h=L.shift().split(',').map(s=>s.trim());return L.map(l=>{const c=l.split(',');const o={};h.forEach((k,i)=>o[k]=(c[i]||'').trim());o.lat=+o.lat;o.lon=+o.lon;o.depth_m=+o.depth_m;o.t=new Date(o.time).getTime();o.v=o.value===''?null:+o.value;o.unit=(o.unit||'C').toUpperCase();return o})};
+let M=parse(SAMPLE_M),O=parse(SAMPLE_O),R=null,step=0,timer=null,playing=false;
+const toC=r=>r.v==null?null:(r.unit==='F'?(r.v-32)*5/9:r.v);
+function run(){const used=new Set();R=M.map(m=>{let best=null,bd=1e9;O.forEach((o,i)=>{if(used.has(i))return;if(Math.abs(o.lat-m.lat)<=.05&&Math.abs(o.lon-m.lon)<=.05&&Math.abs(o.depth_m-m.depth_m)<=2&&Math.abs(o.t-m.t)<=3*3600e3){const d=Math.abs(o.t-m.t)+Math.abs(o.depth_m-m.depth_m)*1e5;if(d<bd){bd=d;best=i}}});
+ if(best==null)return{m,o:null,s:'unmatched',msg:'No observation within tolerance'};used.add(best);const o=O[best];
+ if(o.v==null||m.v==null)return{m,o,s:'missing',msg:'Missing value – excluded'};
+ const conv=o.unit!==m.unit;const oc=toC(o),mc=toC(m);return{m,o,s:conv?'converted':'ok',msg:conv?`Unit converted ${o.v}°${o.unit}→${oc.toFixed(1)}°C`:'Matched',mc,oc,d:oc-mc}});
+ R.extra=O.filter((_,i)=>!used.has(i)).length}
+const CAP=["Step 1 — The researcher selects a model dataset and an observation dataset (two small CSVs with temperature, location, depth, time and units).",
+"Step 2 — The toolkit aligns records on location, depth and time using tolerances, and normalises units so every value is in °C.",
+"Step 3 — Valid records are matched; missing values, unit mismatches and unmatched records are flagged and excluded from the comparison.",
+"Step 4 — Only reliable pairs are compared: differences, bias and error are calculated, with data-quality warnings shown to the researcher."];
+const NAMES=["1 Select datasets","2 Align","3 Match & flag","4 Compare"];
+const tbl=(rows,cols)=>`<div class="tw"><table><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr>${rows.map((r,i)=>`<tr class="in" style="animation-delay:${i*60}ms">${cols.map(c=>`<td>${c[1](r)}</td>`).join('')}</tr>`).join('')}</table></div>`;
+const base=[["ID",r=>r.id],["Lat",r=>r.lat],["Lon",r=>r.lon],["Depth m",r=>r.depth_m],["Time",r=>r.time],["Value",r=>r.v==null?'—':r.v],["Unit",r=>'°'+r.unit]];
+const tag=s=>({ok:'<span class="tag ok">Matched</span>',converted:'<span class="tag warn">Unit converted</span>',missing:'<span class="tag bad">Missing value</span>',unmatched:'<span class="tag bad">Unmatched</span>'}[s]);
+function render(){
+ $('steps').innerHTML=NAMES.map((n,i)=>`<div class="st ${i==step?'on':i<step?'done':''}" onclick="go(${i})">${n}</div>`).join('');
+ $('cap').textContent=CAP[step];$('pb').style.width=((step+1)/4*100)+'%';
+ let h='';const ok=R.filter(r=>r.s==='ok'||r.s==='converted');
+ if(step==0)h=`<h3>Model dataset (${M.length} records)</h3>${tbl(M,base)}<h3 style="margin-top:14px">Observation dataset (${O.length} records)</h3>${tbl(O,base)}`;
+ if(step==1)h=`<h3>Alignment on location · depth · time · units</h3>${tbl(R,[["Model",r=>r.m.id],["Obs",r=>r.o?r.o.id:'—'],["Δ lat/lon",r=>r.o?(Math.abs(r.o.lat-r.m.lat)+Math.abs(r.o.lon-r.m.lon)).toFixed(2)+'°':'—'],["Δ depth",r=>r.o?Math.abs(r.o.depth_m-r.m.depth_m)+' m':'—'],["Δ time",r=>r.o?(Math.abs(r.o.t-r.m.t)/36e5).toFixed(2)+' h':'—'],["Obs unit",r=>r.o?'°'+r.o.unit:'—'],["Unit action",r=>r.o&&r.o.unit!==r.m.unit?'<span class="tag warn">F → C</span>':'none']])}`;
+ if(step==2)h=`<div class="m"><div><b>${ok.length}</b><span>valid matches</span></div><div><b>${R.filter(r=>r.s==='missing').length}</b><span>missing values</span></div><div><b>${R.filter(r=>r.s==='unmatched').length}</b><span>unmatched model records</span></div><div><b>${R.extra}</b><span>unused observations</span></div></div>${tbl(R,[["Model",r=>r.m.id],["Obs",r=>r.o?r.o.id:'—'],["Status",r=>tag(r.s)],["Note",r=>r.msg]])}`;
+ if(step==3){const n=ok.length,bias=ok.reduce((a,r)=>a+r.d,0)/(n||1),mae=ok.reduce((a,r)=>a+Math.abs(r.d),0)/(n||1),rm=Math.sqrt(ok.reduce((a,r)=>a+r.d*r.d,0)/(n||1));const mx=Math.max(1,...ok.map(r=>Math.abs(r.d)));
+ h=`<div class="m"><div><b>${n}/${R.length}</b><span>records compared</span></div><div><b>${bias.toFixed(2)} °C</b><span>mean bias (obs − model)</span></div><div><b>${mae.toFixed(2)} °C</b><span>MAE</span></div><div><b>${rm.toFixed(2)} °C</b><span>RMSE</span></div></div>
+ <h3>Difference per matched record (obs − model, °C)</h3>${ok.map(r=>`<div class="row"><div class="l">${r.m.id} · ${r.m.depth_m} m</div><div class="t"><div style="position:absolute;left:50%;top:0;width:1px;height:100%;background:var(--mut)"></div><div class="f" style="${r.d>=0?`left:50%;width:${r.d/mx*50}%;background:var(--teal)`:`right:50%;width:${-r.d/mx*50}%;background:var(--warn)`}"></div></div><div style="width:50px;text-align:right">${r.d>=0?'+':''}${r.d.toFixed(2)}</div></div>`).join('')}
+ <h3 style="margin-top:14px">Data-quality warnings</h3>${R.filter(r=>r.s!=='ok').map(r=>`<div style="margin:4px 0">${tag(r.s)} <b>${r.m.id}</b> — ${r.msg}</div>`).join('')||'None'}
+ <div class="note" style="margin-top:8px">Flagged records are excluded; the researcher reviews warnings and decides next steps (fallback from slide 8).</div>`}
+ $('panel').innerHTML=h}
+function go(i){step=Math.max(0,Math.min(3,i));render()}
+function stop(){clearInterval(timer);playing=false;$('play').textContent='▶ Play demo'}
+$('play').onclick=()=>{if(playing){stop();return}playing=true;$('play').textContent='⏸ Pause';if(step==3)go(0);timer=setInterval(()=>{if(step>=3){stop();return}go(step+1)},4500)};
+$('next').onclick=()=>{stop();go(step+1)};$('prev').onclick=()=>{stop();go(step-1)};
+const rd=(f,cb)=>{const r=new FileReader();r.onload=()=>{try{cb(parse(r.result));run();stop();go(0)}catch(e){alert('Could not read CSV: check the column names.')}};r.readAsText(f)};
+$('fm').onchange=e=>e.target.files[0]&&rd(e.target.files[0],d=>M=d);$('fo').onchange=e=>e.target.files[0]&&rd(e.target.files[0],d=>O=d);
+$('rst').onclick=()=>{M=parse(SAMPLE_M);O=parse(SAMPLE_O);run();stop();go(0)};
+run();render();
+</script></body></html>
